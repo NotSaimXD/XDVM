@@ -106,9 +106,9 @@
 
 		<section class="hero">
 			<div>
-				<p class="eyebrow">YOUR PERSONAL COMPUTE DESK</p>
-				<h1>Make room for<br /><em>what’s next.</em></h1>
-				<p class="hero-copy">Run Linux environments and useful web apps side by side, directly from your browser.</p>
+				<p class="eyebrow">XDVM WORKSPACE</p>
+				<h1>Your virtual<br /><em>machines.</em></h1>
+				<p class="hero-copy">Pick an operating system, review its resources, and launch your workspace.</p>
 			</div>
 			<div class="resource-card">
 				<p class="eyebrow">HOST CAPACITY</p>
@@ -162,5 +162,28 @@
 	.section-block { padding: 0 32px 60px; }.section-heading { display: flex; justify-content: space-between; align-items: end; margin-bottom: 22px; }.section-heading h2 { margin: 0; color: #1f2925; font-size: 25px; letter-spacing: -.02em; }.plus-button { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid #b8b4a9; border-radius: 50%; background: transparent; color: #a35e47; font-size: 25px; cursor: pointer; }.plus-button:hover { background: #1f2925; color: white; border-color: #1f2925; }.os-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }.os-card, .app-card { border: 1px solid #d3cfc4; background: rgba(255,255,255,.3); cursor: pointer; text-align: left; }.os-card { min-height: 154px; padding: 17px; display: flex; flex-direction: column; justify-content: space-between; }.os-card:hover, .os-card.selected { border-color: #a35e47; background: #fffdf8; box-shadow: 0 5px 0 #a35e47; }.os-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: var(--accent); color: white; font-size: 19px; font-weight: 800; }.os-copy { display: flex; flex-direction: column; gap: 4px; }.os-copy strong, .app-card strong { color: #252a25; font-size: 14px; }.os-copy small, .app-card small { color: #77786f; font-size: 11px; }.os-state { color: #9d6551; font-size: 10px; text-transform: uppercase; letter-spacing: .1em; }.create-panel { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-top: 18px; padding: 18px; background: #e7e2d8; }.create-panel p { margin: 5px 0 0; color: #77786f; font-size: 12px; }.upload-button { padding: 11px 15px; border: 1px solid #a35e47; color: #8c4e3c; font-size: 12px; cursor: pointer; white-space: nowrap; }.upload-button input { display: none; }.launch-button { width: 100%; margin-top: 18px; padding: 16px; border: 0; background: #1f2925; color: #f1eee5; font-size: 13px; font-weight: 700; letter-spacing: .04em; cursor: pointer; }.launch-button:hover { background: #a35e47; }.launch-button span { margin-left: 8px; }.web-apps { padding-top: 8px; }.app-count { color: #797a72; font-size: 12px; }.app-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }.app-card { display: flex; gap: 14px; align-items: center; padding: 18px; text-decoration: none; }.app-card:hover { border-color: #a35e47; background: #fffdf8; }.app-card span:last-child { display: flex; flex-direction: column; gap: 5px; }.app-icon { display: grid; place-items: center; width: 32px; height: 32px; background: #dce7dd; color: #486d54; }.vm-shell { height: 100vh; background: #000; }.back-button { position: fixed; z-index: 20; top: 8px; right: 12px; padding: 5px 9px; border: 1px solid #666; background: #222; color: #ddd; font-size: 12px; cursor: pointer; }.back-button span { margin-left: 4px; }
 	footer { display: flex; justify-content: space-between; padding: 28px 32px; border-top: 1px solid #d5d1c7; color: #85867d; font-size: 11px; letter-spacing: .03em; }
 	.image-message { max-width: 620px; color: #9a5845 !important; }
+	.launcher { background: #edf1ef; }
+	.topbar { padding-top: 18px; padding-bottom: 18px; border-bottom-color: #d9dfdc; }
+	.brand-mark { background: #235b50; }
+	.hero { gap: 48px; padding-top: 48px; padding-bottom: 46px; }
+	.hero h1 { font-size: clamp(44px, 6vw, 68px); letter-spacing: -.045em; }
+	.hero-copy { margin-top: 20px; font-size: 15px; }
+	.resource-card { border: 1px solid #d8e0db; border-left: 3px solid #347b68; border-radius: 12px; background: #fff; box-shadow: 0 12px 30px rgba(32, 52, 44, .06); }
+	.section-block { padding-bottom: 42px; }
+	.section-heading { margin-bottom: 15px; }
+	.section-heading h2 { font-size: 21px; }
+	.plus-button { width: 38px; height: 38px; border-radius: 10px; border-color: #347b68; background: #347b68; color: #fff; font-size: 23px; }
+	.plus-button:hover { background: #235b50; border-color: #235b50; }
+	.os-grid { gap: 12px; }
+	.os-card { min-height: 138px; padding: 15px; border-radius: 12px; background: #fff; box-shadow: 0 3px 12px rgba(32, 52, 44, .04); }
+	.os-card:hover, .os-card.selected { border-color: #347b68; background: #fff; box-shadow: 0 0 0 2px #347b68; }
+	.os-icon { width: 34px; height: 34px; font-size: 16px; }
+	.create-panel { border: 1px solid #d8e0db; border-radius: 12px; background: #fff; }
+	.upload-button { border-radius: 8px; border-color: #347b68; color: #235b50; }
+	.launch-button { width: auto; min-width: 210px; padding: 13px 20px; border-radius: 8px; background: #235b50; }
+	.launch-button:hover { background: #347b68; }
+	.app-card { border-radius: 10px; background: #fff; box-shadow: 0 3px 12px rgba(32, 52, 44, .04); }
+	.app-card:hover { border-color: #347b68; }
+	.app-icon { border-radius: 8px; background: #dfeee8; color: #347b68; }
 	@media (max-width: 800px) { .topbar, .hero, .section-block, footer { padding-left: 20px; padding-right: 20px; }.hero { grid-template-columns: 1fr; gap: 35px; padding-top: 55px; }.os-grid { grid-template-columns: repeat(2, 1fr); }.app-grid { grid-template-columns: 1fr; }.create-panel, footer { align-items: flex-start; flex-direction: column; }.topbar-status { display: none; } }
 </style>
