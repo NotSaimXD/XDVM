@@ -1,5 +1,10 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('node:path');
+const { getHostCapabilities, startVm } = require('./qemu.cjs');
+
+function nativeResourcesPath() {
+	return app.isPackaged ? process.resourcesPath : path.join(__dirname, '..', 'resources');
+}
 
 function createWindow() {
 	const window = new BrowserWindow({
@@ -10,12 +15,27 @@ function createWindow() {
 		backgroundColor: '#f5f7f6',
 		webPreferences: {
 			contextIsolation: true,
-			nodeIntegration: false
+			nodeIntegration: false,
+			preload: path.join(__dirname, 'preload.cjs')
 		}
 	});
 
 	window.loadFile(path.join(__dirname, '..', 'build', 'index.html'));
 }
+
+ipcMain.handle('native:get-host', () => getHostCapabilities(nativeResourcesPath()));
+
+ipcMain.handle('native:pick-image', async () => {
+	const result = await dialog.showOpenDialog({
+		properties: ['openFile'],
+		filters: [{ name: 'VM images', extensions: ['iso', 'img', 'raw'] }]
+	});
+	if (result.canceled || result.filePaths.length === 0) return null;
+	const filePath = result.filePaths[0];
+	return { path: filePath, name: path.basename(filePath), imageType: path.extname(filePath).toLowerCase() === '.iso' ? 'iso' : 'disk' };
+});
+
+ipcMain.handle('native:launch', (_event, request) => startVm({ ...request, resourcesPath: nativeResourcesPath() }));
 
 app.whenReady().then(() => {
 	createWindow();

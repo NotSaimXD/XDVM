@@ -27,9 +27,20 @@
 	let hostStorage = 'Detecting';
 	let launchedConfig = null;
 	let launchedOs = null;
+	let nativeHost = null;
+	let nativeMode = false;
+	let nativeProfile = 'balanced';
+	let nativeImage = null;
+	let nativeStatus = '';
+	let nativeError = '';
 
 	onMount(async () => {
 		hostCores = navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} logical cores` : 'Unavailable';
+		if (window.xdvmNative) {
+			nativeHost = await window.xdvmNative.getHost();
+			nativeProfile = nativeHost.cores >= 8 && nativeHost.totalMemory >= 16384 ? 'workstation' : nativeHost.cores >= 4 && nativeHost.totalMemory >= 8192 ? 'balanced' : 'quiet';
+			hostCores = `${nativeHost.cores} logical cores`;
+		}
 		if (navigator.storage?.estimate) {
 			const estimate = await navigator.storage.estimate();
 			const available = estimate.quota ? `${Math.round(estimate.quota / 1073741824)} GB browser quota` : 'Available';
@@ -44,6 +55,11 @@
 		showCreate = false;
 	}
 
+	async function chooseNativeImage() {
+		nativeError = '';
+		nativeImage = await window.xdvmNative.pickImage();
+	}
+
 	function handleImage(event) {
 		customImage = event.currentTarget.files?.[0] || null;
 		customImageName = customImage?.name || '';
@@ -56,7 +72,21 @@
 		}
 	}
 
-	function launch() {
+	async function launch() {
+		if (nativeMode) {
+			if (!nativeImage) {
+				nativeError = 'Choose an ISO or raw disk image before launching.';
+				return;
+			}
+			try {
+				const result = await window.xdvmNative.launch({ imagePath: nativeImage.path, imageType: nativeImage.imageType, profileName: nativeProfile });
+				nativeStatus = `${result.profile} profile started with ${result.accelerator}.`;
+				nativeError = '';
+			} catch (error) {
+				nativeError = error.message;
+			}
+			return;
+		}
 		if (!selectedOs.ready && !customImage) {
 			showCreate = true;
 			return;
@@ -87,7 +117,7 @@
 
 <svelte:head>
 	<title>XDVM | Linux in your browser</title>
-	<meta name="description" content="XDVM is a browser-based Linux workspace with virtual machines and web apps." />
+	<meta name="description" content="XDVM is a hybrid Linux workspace with browser virtualization and native QEMU/KVM desktop VMs." />
 </svelte:head>
 
 {#if launchedConfig}
@@ -115,6 +145,28 @@
 				<div class="resource-row"><span>Processing</span><strong>{hostCores}</strong></div>
 				<div class="resource-row"><span>Browser storage</span><strong>{hostStorage}</strong></div>
 				<p class="resource-note">XDVM uses browser-managed storage and available WebAssembly threads. Your files stay in this browser profile.</p>
+				{#if nativeHost}
+					<div class="runtime-control">
+						<p class="eyebrow">RUNTIME</p>
+						<div class="runtime-switch" role="group" aria-label="Runtime">
+							<button class:active={!nativeMode} on:click={() => nativeMode = false}>Browser</button>
+							<button class:active={nativeMode} disabled={!nativeHost.qemuPath} on:click={() => nativeMode = true}>Native QEMU</button>
+						</div>
+						{#if nativeMode}
+							<label class="profile-select">Device profile
+								<select bind:value={nativeProfile}>
+									{#each Object.entries(nativeHost.profiles) as [id, profile]}
+										<option value={id}>{profile.label} · {profile.memory} MB / {profile.cores} cores</option>
+									{/each}
+								</select>
+							</label>
+							<p class="runtime-note">{nativeHost.kvm ? 'KVM acceleration is available on this host.' : 'KVM is unavailable; QEMU will use multi-threaded TCG.'}</p>
+							<button class="image-picker" on:click={chooseNativeImage}>{nativeImage?.name || 'Choose ISO or raw disk image'}</button>
+							{#if nativeStatus}<p class="native-status">{nativeStatus}</p>{/if}
+							{#if nativeError}<p class="native-error">{nativeError}</p>{/if}
+						{/if}
+				</div>
+				{/if}
 			</div>
 		</section>
 
@@ -135,7 +187,7 @@
 					<label class="upload-button">{customImageName || 'Choose ISO or EXT2'}<input type="file" accept=".iso,.ext2,application/octet-stream" on:change={handleImage} /></label>
 				</div>
 			{/if}
-			<button class="launch-button" on:click={launch}>{customImageType === 'iso' ? 'ISO imported - conversion required' : selectedOs.ready ? `Launch ${selectedOs.name}` : 'Select an image to launch'} <span>↗</span></button>
+			<button class="launch-button" on:click={launch}>{nativeMode ? 'Launch native VM' : customImageType === 'iso' ? 'ISO imported - conversion required' : selectedOs.ready ? `Launch ${selectedOs.name}` : 'Select an image to launch'} <span>↗</span></button>
 		</section>
 
 		<section class="section-block web-apps">
@@ -162,6 +214,18 @@
 	.section-block { padding: 0 32px 60px; }.section-heading { display: flex; justify-content: space-between; align-items: end; margin-bottom: 22px; }.section-heading h2 { margin: 0; color: #1f2925; font-size: 25px; letter-spacing: -.02em; }.plus-button { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid #b8b4a9; border-radius: 50%; background: transparent; color: #a35e47; font-size: 25px; cursor: pointer; }.plus-button:hover { background: #1f2925; color: white; border-color: #1f2925; }.os-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }.os-card, .app-card { border: 1px solid #d3cfc4; background: rgba(255,255,255,.3); cursor: pointer; text-align: left; }.os-card { min-height: 154px; padding: 17px; display: flex; flex-direction: column; justify-content: space-between; }.os-card:hover, .os-card.selected { border-color: #a35e47; background: #fffdf8; box-shadow: 0 5px 0 #a35e47; }.os-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: var(--accent); color: white; font-size: 19px; font-weight: 800; }.os-copy { display: flex; flex-direction: column; gap: 4px; }.os-copy strong, .app-card strong { color: #252a25; font-size: 14px; }.os-copy small, .app-card small { color: #77786f; font-size: 11px; }.os-state { color: #9d6551; font-size: 10px; text-transform: uppercase; letter-spacing: .1em; }.create-panel { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-top: 18px; padding: 18px; background: #e7e2d8; }.create-panel p { margin: 5px 0 0; color: #77786f; font-size: 12px; }.upload-button { padding: 11px 15px; border: 1px solid #a35e47; color: #8c4e3c; font-size: 12px; cursor: pointer; white-space: nowrap; }.upload-button input { display: none; }.launch-button { width: 100%; margin-top: 18px; padding: 16px; border: 0; background: #1f2925; color: #f1eee5; font-size: 13px; font-weight: 700; letter-spacing: .04em; cursor: pointer; }.launch-button:hover { background: #a35e47; }.launch-button span { margin-left: 8px; }.web-apps { padding-top: 8px; }.app-count { color: #797a72; font-size: 12px; }.app-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }.app-card { display: flex; gap: 14px; align-items: center; padding: 18px; text-decoration: none; }.app-card:hover { border-color: #a35e47; background: #fffdf8; }.app-card span:last-child { display: flex; flex-direction: column; gap: 5px; }.app-icon { display: grid; place-items: center; width: 32px; height: 32px; background: #dce7dd; color: #486d54; }.vm-shell { height: 100vh; background: #000; }.back-button { position: fixed; z-index: 20; top: 8px; right: 12px; padding: 5px 9px; border: 1px solid #666; background: #222; color: #ddd; font-size: 12px; cursor: pointer; }.back-button span { margin-left: 4px; }
 	footer { display: flex; justify-content: space-between; padding: 28px 32px; border-top: 1px solid #d5d1c7; color: #85867d; font-size: 11px; letter-spacing: .03em; }
 	.image-message { max-width: 620px; color: #9a5845 !important; }
+	.runtime-control { margin-top: 20px; padding-top: 18px; border-top: 1px solid #d8e0db; }
+	.runtime-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: #edf1ef; border-radius: 8px; }
+	.runtime-switch button { padding: 8px 6px; border: 0; border-radius: 5px; background: transparent; color: #64716b; font: inherit; font-size: 11px; cursor: pointer; }
+	.runtime-switch button.active { background: #235b50; color: #fff; }
+	.runtime-switch button:disabled { color: #adb6b0; cursor: not-allowed; }
+	.profile-select { display: grid; gap: 6px; margin-top: 12px; color: #6c756e; font-size: 11px; }
+	.profile-select select { width: 100%; padding: 9px 10px; border: 1px solid #d8e0db; border-radius: 7px; background: #fff; color: #26332d; font: inherit; font-size: 11px; }
+	.runtime-note, .native-status, .native-error { margin: 10px 0 0; font-size: 11px; line-height: 1.45; }
+	.runtime-note { color: #6c756e; }
+	.native-status { color: #347b68; }
+	.native-error { color: #a35e47; }
+	.image-picker { width: 100%; margin-top: 12px; padding: 10px; border: 1px dashed #9ab7a8; border-radius: 7px; background: #f7faf8; color: #235b50; font: inherit; font-size: 11px; text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 	.launcher { background: #edf1ef; }
 	.topbar { padding-top: 18px; padding-bottom: 18px; border-bottom-color: #d9dfdc; }
 	.brand-mark { background: #235b50; }
