@@ -17,6 +17,7 @@ Version `3.1.0` adds the Windows portable desktop build pipeline. The GitHub rel
 
 - An in-app capture studio for recording a selected screen or window to WebM, with optional audio, pause/resume, elapsed time, and stop-to-save controls.
 - Managed native VM lifecycle controls with launch status, PID visibility, stop support, and guest cleanup when XDVM exits.
+- Android PC image support for ISO, raw, QCOW2, VMDK, and VDI files, with virtio GPU, tablet input, KVM acceleration, and TCG fallback. Android Studio is not required.
 - A dedicated `desktop:build:windows` command.
 - A professional `XDVM Setup 3.1.0.exe` installer alongside the portable executable.
 - Automated Windows release workflow for the portable `.exe`.

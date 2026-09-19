@@ -28,7 +28,7 @@ ipcMain.handle('native:get-host', () => getHostCapabilities(nativeResourcesPath(
 ipcMain.handle('native:pick-image', async () => {
 	const result = await dialog.showOpenDialog({
 		properties: ['openFile'],
-		filters: [{ name: 'VM images', extensions: ['iso', 'img', 'raw'] }]
+		filters: [{ name: 'Android and VM images', extensions: ['iso', 'img', 'raw', 'qcow', 'qcow2', 'vmdk', 'vdi'] }]
 	});
 	if (result.canceled || result.filePaths.length === 0) return null;
 	const filePath = result.filePaths[0];

@@ -254,8 +254,8 @@
 									{/each}
 								</select>
 							</label>
-							<p class="runtime-note">{nativeProfile === 'android' ? 'Android x86_64 mode uses virtio-gpu for smooth integrated-graphics performance.' : nativeHost.kvm ? 'KVM acceleration is available on this host.' : 'KVM is unavailable; QEMU will use multi-threaded TCG.'}</p>
-							<button class="image-picker" on:click={chooseNativeImage}>{nativeImage?.name || 'Choose ISO or raw disk image'}</button>
+							<p class="runtime-note">{nativeProfile === 'android' ? 'Runs Android x86 or x86_64 images without Android Studio. Virtio GPU, tablet input, and low-power sleep settings are enabled for integrated graphics.' : nativeHost.kvm ? 'KVM acceleration is available on this host.' : 'KVM is unavailable; QEMU will use multi-threaded TCG.'}</p>
+							<button class="image-picker" on:click={chooseNativeImage}>{nativeImage?.name || (nativeProfile === 'android' ? 'Choose Android ISO, IMG, QCOW2, VMDK, or VDI' : 'Choose ISO or disk image')}</button>
 							{#if nativeStatus}<p class="native-status">{nativeStatus}</p>{/if}
 							{#if nativeVm}<button class="vm-stop" on:click={stopNativeVm}>Stop native VM · PID {nativeVm.pid}</button>{/if}
 							{#if nativeError}<p class="native-error">{nativeError}</p>{/if}

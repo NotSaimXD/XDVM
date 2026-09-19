@@ -68,6 +68,9 @@ function buildQemuArgs({ imagePath, imageType, profileName, host }) {
 		'-device', profile.android ? 'virtio-gpu-pci' : 'virtio-vga',
 		'-display', 'default'
 	];
+	if (profile.android) {
+		args.push('-device', 'virtio-tablet-pci', '-device', 'virtio-keyboard-pci', '-rtc', 'base=localtime', '-global', 'ICH9-LPC.disable_s3=1', '-global', 'ICH9-LPC.disable_s4=1');
+	}
 
 	if (host.kvm) {
 		args.push('-accel', 'kvm', '-cpu', 'host');
@@ -78,7 +81,9 @@ function buildQemuArgs({ imagePath, imageType, profileName, host }) {
 	if (imageType === 'iso') {
 		args.push('-cdrom', imagePath, '-boot', 'order=d');
 	} else {
-		args.push('-drive', `file=${imagePath},format=raw,if=virtio`);
+		const extension = path.extname(imagePath).toLowerCase();
+		const format = extension === '.qcow2' || extension === '.qcow' ? 'qcow2' : extension === '.vmdk' ? 'vmdk' : extension === '.vdi' ? 'vdi' : 'raw';
+		args.push('-drive', `file=${imagePath},format=${format},if=virtio`);
 	}
 	return { args, profile };
 }
@@ -117,4 +122,4 @@ function stopAllVms() {
 	runningVms.clear();
 }
 
-module.exports = { DEVICE_PROFILES, getHostCapabilities, startVm, getVmStatus, stopVm, stopAllVms };
+module.exports = { DEVICE_PROFILES, getHostCapabilities, buildQemuArgs, startVm, getVmStatus, stopVm, stopAllVms };
