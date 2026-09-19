@@ -1,6 +1,6 @@
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('node:path');
-const { getHostCapabilities, startVm, getVmStatus, stopVm, stopAllVms } = require('./qemu.cjs');
+const { getHostCapabilities, getDiskFormat, startVm, getVmStatus, stopVm, stopAllVms } = require('./qemu.cjs');
 
 function nativeResourcesPath() {
 	return app.isPackaged ? process.resourcesPath : path.join(__dirname, '..', 'resources');
@@ -32,7 +32,7 @@ ipcMain.handle('native:pick-image', async () => {
 	});
 	if (result.canceled || result.filePaths.length === 0) return null;
 	const filePath = result.filePaths[0];
-	return { path: filePath, name: path.basename(filePath), imageType: path.extname(filePath).toLowerCase() === '.iso' ? 'iso' : 'disk' };
+	return { path: filePath, name: path.basename(filePath), imageType: path.extname(filePath).toLowerCase() === '.iso' ? 'iso' : 'disk', imageFormat: getDiskFormat(filePath) };
 });
 
 ipcMain.handle('native:launch', (_event, request) => startVm({ ...request, resourcesPath: nativeResourcesPath() }));

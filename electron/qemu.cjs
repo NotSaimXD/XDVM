@@ -57,7 +57,15 @@ function getHostCapabilities(resourcesPath) {
 	};
 }
 
-function buildQemuArgs({ imagePath, imageType, profileName, host }) {
+function getDiskFormat(imagePath) {
+	const extension = path.extname(imagePath).toLowerCase();
+	if (extension === '.qcow2' || extension === '.qcow') return 'qcow2';
+	if (extension === '.vmdk') return 'vmdk';
+	if (extension === '.vdi') return 'vdi';
+	return 'raw';
+}
+
+function buildQemuArgs({ imagePath, imageType, imageFormat, profileName, host }) {
 	const profile = getDeviceProfile(profileName, host);
 	const args = [
 		'-name', 'XDVM',
@@ -81,9 +89,7 @@ function buildQemuArgs({ imagePath, imageType, profileName, host }) {
 	if (imageType === 'iso') {
 		args.push('-cdrom', imagePath, '-boot', 'order=d');
 	} else {
-		const extension = path.extname(imagePath).toLowerCase();
-		const format = extension === '.qcow2' || extension === '.qcow' ? 'qcow2' : extension === '.vmdk' ? 'vmdk' : extension === '.vdi' ? 'vdi' : 'raw';
-		args.push('-drive', `file=${imagePath},format=${format},if=virtio`);
+		args.push('-drive', `file=${imagePath},format=${imageFormat || getDiskFormat(imagePath)},if=virtio`);
 	}
 	return { args, profile };
 }
@@ -122,4 +128,4 @@ function stopAllVms() {
 	runningVms.clear();
 }
 
-module.exports = { DEVICE_PROFILES, getHostCapabilities, buildQemuArgs, startVm, getVmStatus, stopVm, stopAllVms };
+module.exports = { DEVICE_PROFILES, getHostCapabilities, getDiskFormat, buildQemuArgs, startVm, getVmStatus, stopVm, stopAllVms };

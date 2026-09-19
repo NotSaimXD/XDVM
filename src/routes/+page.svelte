@@ -246,6 +246,7 @@
 							<button class:active={!nativeMode} on:click={() => nativeMode = false}>Browser</button>
 							<button class:active={nativeMode} disabled={!nativeHost.qemuPath} on:click={() => nativeMode = true}>Native QEMU</button>
 						</div>
+						<p class="runtime-note">{nativeHost.qemuPath ? `QEMU ready: ${nativeHost.qemuPath}` : 'QEMU is not installed or bundled on this device.'}</p>
 						{#if nativeMode}
 							<label class="profile-select">Device profile
 								<select bind:value={nativeProfile}>

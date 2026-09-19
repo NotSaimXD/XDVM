@@ -66,3 +66,5 @@ If you want to build a product on top of CheerpX/WebVM, please see our other lic
 The Electron build includes a native QEMU launcher. On Linux it uses KVM automatically when `/dev/kvm` is accessible, and falls back to multi-threaded TCG when it is not. The launcher selects a `Quiet`, `Balanced`, or `Workstation` device profile from the host's CPU and memory, with an explicit override in the desktop UI.
 
 To package QEMU with a desktop build, place the matching `qemu-system-x86_64` executable in `resources/qemu/` (`qemu-system-x86_64.exe` on Windows), then run `npm run desktop:build` for a portable Windows build or `npm run desktop:build:linux` for AppImage. When no bundled binary is present, XDVM looks for `qemu-system-x86_64` on `PATH`.
+
+Raw images are supported directly. Files ending in `.raw`, `.img`, or `.bin` are opened as `format=raw`; `.qcow`, `.qcow2`, `.vmdk`, and `.vdi` use their matching QEMU format. QEMU must be installed on the host or included in the desktop package for native launch to work.
