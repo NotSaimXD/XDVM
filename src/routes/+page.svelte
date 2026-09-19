@@ -1,5 +1,5 @@
 <script>
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import WebVM from '$lib/WebVM.svelte';
 	import * as debianConfig from '/config_terminal';
 
@@ -33,6 +33,16 @@
 	let nativeImage = null;
 	let nativeStatus = '';
 	let nativeError = '';
+	let nativeVm = null;
+	let showRecorder = false;
+	let recording = false;
+	let recordingPaused = false;
+	let recordAudio = false;
+	let recordSeconds = 0;
+	let mediaRecorder = null;
+	let recordStream = null;
+	let recordChunks = [];
+	let recordTimer = null;
 
 	onMount(async () => {
 		hostCores = navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} logical cores` : 'Unavailable';
@@ -50,6 +60,70 @@
 		}
 	});
 
+	function formatRecordingTime(seconds) {
+		const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
+		const remainder = (seconds % 60).toString().padStart(2, '0');
+		return `${minutes}:${remainder}`;
+	}
+
+	async function startRecording() {
+		if (!navigator.mediaDevices?.getDisplayMedia || !window.MediaRecorder) return;
+		try {
+			recordStream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: recordAudio });
+			const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find((type) => MediaRecorder.isTypeSupported(type));
+			mediaRecorder = new MediaRecorder(recordStream, mimeType ? { mimeType } : undefined);
+			recordChunks = [];
+			recordSeconds = 0;
+			mediaRecorder.ondataavailable = (event) => event.data.size > 0 && recordChunks.push(event.data);
+			mediaRecorder.onstop = () => {
+				const blob = new Blob(recordChunks, { type: mediaRecorder.mimeType || 'video/webm' });
+				const url = URL.createObjectURL(blob);
+				const link = document.createElement('a');
+				link.href = url;
+				link.download = `xdvm-recording-${new Date().toISOString().replace(/[:.]/g, '-')}.webm`;
+				link.click();
+				URL.revokeObjectURL(url);
+				recordChunks = [];
+			};
+			recordStream.getVideoTracks()[0].addEventListener('ended', stopRecording);
+			mediaRecorder.start(1000);
+			recording = true;
+			recordingPaused = false;
+			recordTimer = setInterval(() => recordSeconds += 1, 1000);
+		} catch (error) {
+			nativeError = error.name === 'NotAllowedError' ? 'Screen sharing was cancelled.' : `Recording could not start: ${error.message}`;
+		}
+	}
+
+	function toggleRecordingPause() {
+		if (!mediaRecorder) return;
+		if (mediaRecorder.state === 'recording') {
+			mediaRecorder.pause();
+			recordingPaused = true;
+		} else if (mediaRecorder.state === 'paused') {
+			mediaRecorder.resume();
+			recordingPaused = false;
+		}
+	}
+
+	function stopRecording() {
+		if (!mediaRecorder || mediaRecorder.state === 'inactive') return;
+		mediaRecorder.stop();
+		recordStream?.getTracks().forEach((track) => track.stop());
+		clearInterval(recordTimer);
+		recordTimer = null;
+		recording = false;
+		recordingPaused = false;
+		mediaRecorder = null;
+		recordStream = null;
+	}
+
+	onDestroy(() => {
+		if (mediaRecorder?.state !== 'inactive') mediaRecorder?.stop();
+		recordStream?.getTracks().forEach((track) => track.stop());
+		clearInterval(recordTimer);
+	});
+
 	function selectOs(os) {
 		selectedOs = os;
 		showCreate = false;
@@ -58,6 +132,13 @@
 	async function chooseNativeImage() {
 		nativeError = '';
 		nativeImage = await window.xdvmNative.pickImage();
+	}
+
+	async function stopNativeVm() {
+		if (!nativeVm) return;
+		await window.xdvmNative.stop(nativeVm.pid);
+		nativeStatus = 'Native VM stopped.';
+		nativeVm = null;
 	}
 
 	function handleImage(event) {
@@ -81,6 +162,7 @@
 			try {
 				const result = await window.xdvmNative.launch({ imagePath: nativeImage.path, imageType: nativeImage.imageType, profileName: nativeProfile });
 				nativeStatus = `${result.profile} profile started with ${result.accelerator}.`;
+				nativeVm = result;
 				nativeError = '';
 			} catch (error) {
 				nativeError = error.message;
@@ -131,8 +213,20 @@
 	<main class="launcher">
 		<header class="topbar">
 			<div class="brand"><span class="brand-mark">X</span><span>XDVM</span></div>
-			<div class="topbar-status"><span class="status-dot"></span> Browser virtualization <span class="status-divider"></span> {hostCores}</div>
+			<div class="topbar-actions">
+				<div class="topbar-status"><span class="status-dot"></span> Browser virtualization <span class="status-divider"></span> {hostCores}</div>
+				<button class:recording={recording} class="record-toggle" on:click={() => showRecorder = !showRecorder} aria-label="Open recorder">{recording ? 'REC ' + formatRecordingTime(recordSeconds) : 'Record'}</button>
+			</div>
 		</header>
+		{#if showRecorder}
+			<section class="recorder-panel" aria-label="XDVM recorder">
+				<div><p class="eyebrow">CAPTURE STUDIO</p><strong>{recording ? (recordingPaused ? 'Recording paused' : 'Recording screen') : 'Record your workspace'}</strong><p class="recorder-note">Choose a screen or window in the system picker, then save a WebM recording when you stop.</p></div>
+				<div class="recorder-controls">
+					{#if !recording}<label class="audio-toggle"><input type="checkbox" bind:checked={recordAudio} /> Include audio</label>{/if}
+					{#if recording}<span class="record-time">{formatRecordingTime(recordSeconds)}</span><button class="recorder-button" on:click={toggleRecordingPause}>{recordingPaused ? 'Resume' : 'Pause'}</button><button class="recorder-button stop" on:click={stopRecording}>Stop & save</button>{:else}<button class="recorder-button start" on:click={startRecording}>Start recording</button>{/if}
+				</div>
+			</section>
+		{/if}
 
 		<section class="hero">
 			<div>
@@ -160,9 +254,10 @@
 									{/each}
 								</select>
 							</label>
-							<p class="runtime-note">{nativeHost.kvm ? 'KVM acceleration is available on this host.' : 'KVM is unavailable; QEMU will use multi-threaded TCG.'}</p>
+							<p class="runtime-note">{nativeProfile === 'android' ? 'Android x86_64 mode uses virtio-gpu for smooth integrated-graphics performance.' : nativeHost.kvm ? 'KVM acceleration is available on this host.' : 'KVM is unavailable; QEMU will use multi-threaded TCG.'}</p>
 							<button class="image-picker" on:click={chooseNativeImage}>{nativeImage?.name || 'Choose ISO or raw disk image'}</button>
 							{#if nativeStatus}<p class="native-status">{nativeStatus}</p>{/if}
+							{#if nativeVm}<button class="vm-stop" on:click={stopNativeVm}>Stop native VM · PID {nativeVm.pid}</button>{/if}
 							{#if nativeError}<p class="native-error">{nativeError}</p>{/if}
 						{/if}
 				</div>
@@ -207,6 +302,20 @@
 	.launcher { min-height: 100vh; overflow: auto; background: radial-gradient(circle at 90% 5%, #d9e7dd 0, transparent 28%), #f2efe8; font-family: Archivo, sans-serif; }
 	.topbar, .hero, .section-block, footer { max-width: 1180px; margin: 0 auto; }
 	.topbar { display: flex; justify-content: space-between; align-items: center; padding: 27px 32px; border-bottom: 1px solid #d5d1c7; }
+	.topbar-actions { display: flex; align-items: center; gap: 18px; }
+	.record-toggle { padding: 8px 12px; border: 1px solid #d8e0db; border-radius: 7px; background: #fff; color: #235b50; font: inherit; font-size: 11px; cursor: pointer; }
+	.record-toggle:hover, .record-toggle.recording { border-color: #a35e47; color: #a35e47; }
+	.recorder-panel { display: flex; justify-content: space-between; align-items: center; gap: 24px; max-width: 1116px; margin: 18px auto 0; padding: 16px 20px; border: 1px solid #d8e0db; border-radius: 10px; background: #fff; box-shadow: 0 6px 20px rgba(32, 52, 44, .06); }
+	.recorder-panel .eyebrow { margin-bottom: 6px; }
+	.recorder-panel strong { color: #26332d; font-size: 14px; }
+	.recorder-note { margin: 5px 0 0; color: #747c76; font-size: 11px; }
+	.recorder-controls { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+	.audio-toggle { display: flex; align-items: center; gap: 7px; margin-right: 8px; color: #68736c; font-size: 11px; white-space: nowrap; }
+	.audio-toggle input { accent-color: #347b68; }
+	.record-time { min-width: 42px; color: #a35e47; font: 700 12px monospace; }
+	.recorder-button { padding: 9px 12px; border: 1px solid #cbd8d1; border-radius: 6px; background: #f7faf8; color: #235b50; font: inherit; font-size: 11px; cursor: pointer; white-space: nowrap; }
+	.recorder-button.start { border-color: #347b68; background: #235b50; color: #fff; }
+	.recorder-button.stop { border-color: #a35e47; color: #a35e47; }
 	.brand { display: flex; gap: 10px; align-items: center; font-weight: 800; letter-spacing: .08em; font-size: 18px; }
 	.brand-mark { display: grid; place-items: center; width: 30px; height: 30px; background: #1f2925; color: #e4f1e1; border-radius: 50%; }
 	.topbar-status { color: #73766f; font-size: 12px; letter-spacing: .03em; }.status-dot { display: inline-block; width: 7px; height: 7px; margin-right: 6px; background: #6eaf76; border-radius: 50%; }.status-divider { display: inline-block; height: 13px; margin: 0 12px -2px; border-left: 1px solid #c4c1b8; }
@@ -225,6 +334,7 @@
 	.runtime-note { color: #6c756e; }
 	.native-status { color: #347b68; }
 	.native-error { color: #a35e47; }
+	.vm-stop { width: 100%; margin-top: 10px; padding: 9px 10px; border: 1px solid #e0b5a7; border-radius: 7px; background: #fff8f5; color: #a35e47; font: inherit; font-size: 11px; text-align: left; cursor: pointer; }
 	.image-picker { width: 100%; margin-top: 12px; padding: 10px; border: 1px dashed #9ab7a8; border-radius: 7px; background: #f7faf8; color: #235b50; font: inherit; font-size: 11px; text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 	.launcher { background: #edf1ef; }
 	.topbar { padding-top: 18px; padding-bottom: 18px; border-bottom-color: #d9dfdc; }
@@ -249,5 +359,5 @@
 	.app-card { border-radius: 10px; background: #fff; box-shadow: 0 3px 12px rgba(32, 52, 44, .04); }
 	.app-card:hover { border-color: #347b68; }
 	.app-icon { border-radius: 8px; background: #dfeee8; color: #347b68; }
-	@media (max-width: 800px) { .topbar, .hero, .section-block, footer { padding-left: 20px; padding-right: 20px; }.hero { grid-template-columns: 1fr; gap: 35px; padding-top: 55px; }.os-grid { grid-template-columns: repeat(2, 1fr); }.app-grid { grid-template-columns: 1fr; }.create-panel, footer { align-items: flex-start; flex-direction: column; }.topbar-status { display: none; } }
+	@media (max-width: 800px) { .topbar, .hero, .section-block, footer { padding-left: 20px; padding-right: 20px; }.hero { grid-template-columns: 1fr; gap: 35px; padding-top: 55px; }.os-grid { grid-template-columns: repeat(2, 1fr); }.app-grid { grid-template-columns: 1fr; }.create-panel, footer { align-items: flex-start; flex-direction: column; }.topbar-status { display: none; }.topbar-actions { gap: 0; }.recorder-panel { align-items: flex-start; flex-direction: column; margin-left: 20px; margin-right: 20px; }.recorder-controls { flex-wrap: wrap; } }
 </style>

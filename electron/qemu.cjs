@@ -2,11 +2,13 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawn, spawnSync } = require('node:child_process');
+const runningVms = new Map();
 
 const DEVICE_PROFILES = {
 	quiet: { label: 'Quiet', memory: 2048, cores: 2 },
 	balanced: { label: 'Balanced', memory: 4096, cores: 4 },
-	workstation: { label: 'Workstation', memory: 8192, cores: 6 }
+	workstation: { label: 'Workstation', memory: 8192, cores: 6 },
+	android: { label: 'Android Fast', memory: 4096, cores: 4, android: true, graphics: 'virtio-gpu' }
 };
 
 function getDeviceProfile(name, host) {
@@ -63,6 +65,7 @@ function buildQemuArgs({ imagePath, imageType, profileName, host }) {
 		'-m', String(profile.memory),
 		'-smp', String(Math.min(profile.cores, host.cores)),
 		'-nic', 'user,model=virtio',
+		'-device', profile.android ? 'virtio-gpu-pci' : 'virtio-vga',
 		'-display', 'default'
 	];
 
@@ -90,8 +93,28 @@ function startVm({ imagePath, imageType, profileName, resourcesPath }) {
 	}
 	const { args, profile } = buildQemuArgs({ imagePath, imageType, profileName, host });
 	const child = spawn(host.qemuPath, args, { detached: false, stdio: 'ignore', windowsHide: true });
+	runningVms.set(child.pid, child);
+	child.once('exit', () => runningVms.delete(child.pid));
 	child.unref();
-	return { pid: child.pid, accelerator: host.kvm ? 'KVM' : 'TCG', profile: profile.label };
+	return { pid: child.pid, accelerator: host.kvm ? 'KVM' : 'TCG', graphics: profile.graphics || 'virtio-vga', profile: profile.label };
 }
 
-module.exports = { DEVICE_PROFILES, getHostCapabilities, startVm };
+function getVmStatus(pid) {
+	const child = runningVms.get(pid);
+	return { pid, running: Boolean(child && !child.killed) };
+}
+
+function stopVm(pid) {
+	const child = runningVms.get(pid);
+	if (!child) return { pid, stopped: false };
+	child.kill();
+	runningVms.delete(pid);
+	return { pid, stopped: true };
+}
+
+function stopAllVms() {
+	for (const child of runningVms.values()) child.kill();
+	runningVms.clear();
+}
+
+module.exports = { DEVICE_PROFILES, getHostCapabilities, startVm, getVmStatus, stopVm, stopAllVms };

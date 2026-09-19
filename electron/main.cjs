@@ -1,6 +1,6 @@
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('node:path');
-const { getHostCapabilities, startVm } = require('./qemu.cjs');
+const { getHostCapabilities, startVm, getVmStatus, stopVm, stopAllVms } = require('./qemu.cjs');
 
 function nativeResourcesPath() {
 	return app.isPackaged ? process.resourcesPath : path.join(__dirname, '..', 'resources');
@@ -36,6 +36,8 @@ ipcMain.handle('native:pick-image', async () => {
 });
 
 ipcMain.handle('native:launch', (_event, request) => startVm({ ...request, resourcesPath: nativeResourcesPath() }));
+ipcMain.handle('native:vm-status', (_event, pid) => getVmStatus(pid));
+ipcMain.handle('native:stop', (_event, pid) => stopVm(pid));
 
 app.whenReady().then(() => {
 	createWindow();
@@ -45,5 +47,6 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+	stopAllVms();
 	if (process.platform !== 'darwin') app.quit();
 });
