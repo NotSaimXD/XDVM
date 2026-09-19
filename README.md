@@ -1,6 +1,26 @@
-# XDVM 3.1
+# XDVM 4
 
 XDVM is a hybrid Linux workspace made by NotSaimXD heres it launches lightweight environments in the browser with CheerpX, or use native QEMU with KVM acceleration from the desktop app. XDVM is a fork of WebVM by NotSaimXD and keeps the original WebVM attribution and licensing terms.
+
+## XDVM 4 release
+
+Version `4.0.0` adds persistent appearance modes and keeps the professional Windows installer and portable VM app packaging from XDVM 3.1.
+
+### Added
+
+- Light, Dark, and System appearance modes in the launcher.
+- Theme preference persistence across sessions using local storage.
+- Automatic response to the operating system's dark-mode preference when System mode is selected.
+- Windows NSIS installer with desktop and Start Menu shortcuts, an uninstall entry, and selectable installation directory.
+
+### Changed
+
+- The Windows installer now identifies itself as `XDVM 4`.
+- Existing QEMU, Android, raw-image, recording, and browser virtualization features remain available.
+
+### Removed
+
+- No VM runtimes or browser workflows were removed.
 
 ## XDVM 3.1 release
 

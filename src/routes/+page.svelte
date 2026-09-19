@@ -43,8 +43,15 @@
 	let recordStream = null;
 	let recordChunks = [];
 	let recordTimer = null;
+	let themeMode = 'system';
+	let isDarkTheme = false;
+	let themeMediaQuery = null;
 
 	onMount(async () => {
+		themeMode = localStorage.getItem('xdvm-theme') || 'system';
+		themeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+		applyTheme();
+		themeMediaQuery.addEventListener('change', applyTheme);
 		hostCores = navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} logical cores` : 'Unavailable';
 		if (window.xdvmNative) {
 			nativeHost = await window.xdvmNative.getHost();
@@ -59,6 +66,16 @@
 			hostStorage = 'Unavailable';
 		}
 	});
+
+	function applyTheme() {
+		isDarkTheme = themeMode === 'dark' || (themeMode === 'system' && themeMediaQuery?.matches);
+	}
+
+	function setTheme(mode) {
+		themeMode = mode;
+		localStorage.setItem('xdvm-theme', mode);
+		applyTheme();
+	}
 
 	function formatRecordingTime(seconds) {
 		const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -119,6 +136,7 @@
 	}
 
 	onDestroy(() => {
+		themeMediaQuery?.removeEventListener('change', applyTheme);
 		if (mediaRecorder?.state !== 'inactive') mediaRecorder?.stop();
 		recordStream?.getTracks().forEach((track) => track.stop());
 		clearInterval(recordTimer);
@@ -210,11 +228,16 @@
 		</WebVM>
 	</div>
 {:else}
-	<main class="launcher">
+			<main class:theme-dark={isDarkTheme} class="launcher">
 		<header class="topbar">
 			<div class="brand"><span class="brand-mark">X</span><span>XDVM</span></div>
 			<div class="topbar-actions">
 				<div class="topbar-status"><span class="status-dot"></span> Browser virtualization <span class="status-divider"></span> {hostCores}</div>
+				<div class="theme-switch" role="group" aria-label="Appearance mode">
+					<button class:active={themeMode === 'light'} on:click={() => setTheme('light')}>Light</button>
+					<button class:active={themeMode === 'dark'} on:click={() => setTheme('dark')}>Dark</button>
+					<button class:active={themeMode === 'system'} on:click={() => setTheme('system')}>System</button>
+				</div>
 				<button class:recording={recording} class="record-toggle" on:click={() => showRecorder = !showRecorder} aria-label="Open recorder">{recording ? 'REC ' + formatRecordingTime(recordSeconds) : 'Record'}</button>
 			</div>
 		</header>
@@ -304,6 +327,9 @@
 	.topbar, .hero, .section-block, footer { max-width: 1180px; margin: 0 auto; }
 	.topbar { display: flex; justify-content: space-between; align-items: center; padding: 27px 32px; border-bottom: 1px solid #d5d1c7; }
 	.topbar-actions { display: flex; align-items: center; gap: 18px; }
+	.theme-switch { display: flex; gap: 2px; padding: 3px; border: 1px solid #d8e0db; border-radius: 7px; background: #f7faf8; }
+	.theme-switch button { padding: 5px 7px; border: 0; border-radius: 5px; background: transparent; color: #68736c; font: inherit; font-size: 10px; cursor: pointer; }
+	.theme-switch button.active { background: #235b50; color: #fff; }
 	.record-toggle { padding: 8px 12px; border: 1px solid #d8e0db; border-radius: 7px; background: #fff; color: #235b50; font: inherit; font-size: 11px; cursor: pointer; }
 	.record-toggle:hover, .record-toggle.recording { border-color: #a35e47; color: #a35e47; }
 	.recorder-panel { display: flex; justify-content: space-between; align-items: center; gap: 24px; max-width: 1116px; margin: 18px auto 0; padding: 16px 20px; border: 1px solid #d8e0db; border-radius: 10px; background: #fff; box-shadow: 0 6px 20px rgba(32, 52, 44, .06); }
@@ -337,6 +363,19 @@
 	.native-error { color: #a35e47; }
 	.vm-stop { width: 100%; margin-top: 10px; padding: 9px 10px; border: 1px solid #e0b5a7; border-radius: 7px; background: #fff8f5; color: #a35e47; font: inherit; font-size: 11px; text-align: left; cursor: pointer; }
 	.image-picker { width: 100%; margin-top: 12px; padding: 10px; border: 1px dashed #9ab7a8; border-radius: 7px; background: #f7faf8; color: #235b50; font: inherit; font-size: 11px; text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+	.launcher.theme-dark { background: radial-gradient(circle at 90% 5%, #20352f 0, transparent 30%), #111816; color: #e7eee9; }
+	.launcher.theme-dark .topbar { border-bottom-color: #2c3c35; }
+	.launcher.theme-dark .brand, .launcher.theme-dark .hero h1, .launcher.theme-dark .section-heading h2, .launcher.theme-dark .resource-row strong, .launcher.theme-dark .os-copy strong, .launcher.theme-dark .app-card strong { color: #edf4ef; }
+	.launcher.theme-dark .topbar-status, .launcher.theme-dark .hero-copy, .launcher.theme-dark .resource-note, .launcher.theme-dark .os-copy small, .launcher.theme-dark .app-card small, .launcher.theme-dark .app-count { color: #a7b5ac; }
+	.launcher.theme-dark .resource-card, .launcher.theme-dark .create-panel, .launcher.theme-dark .os-card, .launcher.theme-dark .app-card, .launcher.theme-dark .recorder-panel { border-color: #30463b; background: #1b2621; box-shadow: 0 8px 22px rgba(0, 0, 0, .2); }
+	.launcher.theme-dark .resource-row { border-bottom-color: #304239; }
+	.launcher.theme-dark .runtime-control { border-top-color: #304239; }
+	.launcher.theme-dark .runtime-switch, .launcher.theme-dark .theme-switch { border-color: #30463b; background: #15201b; }
+	.launcher.theme-dark .profile-select select { border-color: #3b5548; background: #15201b; color: #edf4ef; }
+	.launcher.theme-dark .image-picker { border-color: #527b67; background: #15201b; color: #9ed0b4; }
+	.launcher.theme-dark .recorder-note, .launcher.theme-dark .audio-toggle, .launcher.theme-dark .runtime-note { color: #a7b5ac; }
+	.launcher.theme-dark .record-toggle { border-color: #3b5548; background: #1b2621; color: #b5dec4; }
+	.launcher.theme-dark footer { border-top-color: #2c3c35; color: #9aa99f; }
 	.launcher { background: #edf1ef; }
 	.topbar { padding-top: 18px; padding-bottom: 18px; border-bottom-color: #d9dfdc; }
 	.brand-mark { background: #235b50; }
@@ -360,5 +399,5 @@
 	.app-card { border-radius: 10px; background: #fff; box-shadow: 0 3px 12px rgba(32, 52, 44, .04); }
 	.app-card:hover { border-color: #347b68; }
 	.app-icon { border-radius: 8px; background: #dfeee8; color: #347b68; }
-	@media (max-width: 800px) { .topbar, .hero, .section-block, footer { padding-left: 20px; padding-right: 20px; }.hero { grid-template-columns: 1fr; gap: 35px; padding-top: 55px; }.os-grid { grid-template-columns: repeat(2, 1fr); }.app-grid { grid-template-columns: 1fr; }.create-panel, footer { align-items: flex-start; flex-direction: column; }.topbar-status { display: none; }.topbar-actions { gap: 0; }.recorder-panel { align-items: flex-start; flex-direction: column; margin-left: 20px; margin-right: 20px; }.recorder-controls { flex-wrap: wrap; } }
+	@media (max-width: 800px) { .topbar, .hero, .section-block, footer { padding-left: 20px; padding-right: 20px; }.hero { grid-template-columns: 1fr; gap: 35px; padding-top: 55px; }.os-grid { grid-template-columns: repeat(2, 1fr); }.app-grid { grid-template-columns: 1fr; }.create-panel, footer { align-items: flex-start; flex-direction: column; }.topbar-status { display: none; }.topbar-actions { gap: 8px; }.theme-switch button { padding-left: 5px; padding-right: 5px; }.recorder-panel { align-items: flex-start; flex-direction: column; margin-left: 20px; margin-right: 20px; }.recorder-controls { flex-wrap: wrap; } }
 </style>
