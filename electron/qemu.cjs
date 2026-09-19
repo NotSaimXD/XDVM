@@ -66,7 +66,7 @@ function getDiskFormat(imagePath) {
 	return 'raw';
 }
 
-function buildQemuArgs({ imagePath, imageType, imageFormat, profileName, memory, cores, host }) {
+function buildQemuArgs({ imagePath, imageType, imageFormat, profileName, memory, cores, snapshot, host }) {
 	const profile = getDeviceProfile(profileName, host);
 	const requestedMemory = Number(memory) || profile.memory;
 	const requestedCores = Number(cores) || profile.cores;
@@ -84,6 +84,7 @@ function buildQemuArgs({ imagePath, imageType, imageFormat, profileName, memory,
 	if (profile.android) {
 		args.push('-device', 'virtio-tablet-pci', '-device', 'virtio-keyboard-pci', '-rtc', 'base=localtime', '-global', 'ICH9-LPC.disable_s3=1', '-global', 'ICH9-LPC.disable_s4=1');
 	}
+	if (snapshot) args.push('-snapshot');
 
 	if (host.kvm) {
 		args.push('-accel', 'kvm', '-cpu', 'host');
@@ -99,7 +100,7 @@ function buildQemuArgs({ imagePath, imageType, imageFormat, profileName, memory,
 	return { args, profile, memory: guestMemory, cores: guestCores };
 }
 
-function startVm({ imagePath, imageType, imageFormat, profileName, memory, cores, resourcesPath }) {
+function startVm({ imagePath, imageType, imageFormat, profileName, memory, cores, snapshot, resourcesPath }) {
 	if (!path.isAbsolute(imagePath) || !fs.existsSync(imagePath)) {
 		throw new Error('The selected VM image is not available on this device.');
 	}
@@ -107,12 +108,12 @@ function startVm({ imagePath, imageType, imageFormat, profileName, memory, cores
 	if (!host.qemuPath) {
 		throw new Error('QEMU was not found. Add qemu-system-x86_64 to the bundled qemu folder or install it on the host.');
 	}
-	const { args, profile, memory: guestMemory, cores: guestCores } = buildQemuArgs({ imagePath, imageType, imageFormat, profileName, memory, cores, host });
+	const { args, profile, memory: guestMemory, cores: guestCores } = buildQemuArgs({ imagePath, imageType, imageFormat, profileName, memory, cores, snapshot, host });
 	const child = spawn(host.qemuPath, args, { detached: false, stdio: 'ignore', windowsHide: true });
 	runningVms.set(child.pid, child);
 	child.once('exit', () => runningVms.delete(child.pid));
 	child.unref();
-	return { pid: child.pid, accelerator: host.kvm ? 'KVM' : 'TCG', graphics: profile.graphics || 'virtio-vga', profile: profile.label, memory: guestMemory, cores: guestCores };
+	return { pid: child.pid, accelerator: host.kvm ? 'KVM' : 'TCG', graphics: profile.graphics || 'virtio-vga', profile: profile.label, memory: guestMemory, cores: guestCores, snapshot: Boolean(snapshot) };
 }
 
 function getVmStatus(pid) {

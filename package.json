@@ -1,6 +1,6 @@
 {
 	"name": "xdvm",
-	"version": "4.0.0",
+	"version": "5.0.0",
 	"productName": "XDVM",
 	"description": "A hybrid virtual machine workspace powered by browser virtualization and native QEMU/KVM.",
 	"author": "NotSaimXD",
@@ -54,7 +54,7 @@
 			"createDesktopShortcut": "always",
 			"createStartMenuShortcut": true,
 			"shortcutName": "XDVM",
-			"uninstallDisplayName": "XDVM 4",
+			"uninstallDisplayName": "XDVM 5",
 			"deleteAppDataOnUninstall": false
 		},
 		"linux": { "target": "AppImage", "category": "Utility" }
