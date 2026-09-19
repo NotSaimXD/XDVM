@@ -4,6 +4,7 @@ on:
 	push:
 		tags:
 			- 'v*.*.*'
+	workflow_dispatch:
 
 permissions:
 	contents: write
@@ -27,7 +28,7 @@ jobs:
 					choco install qemu -y --no-progress
 					$qemu = (Get-Command qemu-system-x86_64.exe).Source
 					New-Item -ItemType Directory -Force resources/qemu | Out-Null
-					  Copy-Item "$(Split-Path $qemu)\*" resources/qemu -Recurse -Force
+					Copy-Item "$(Split-Path $qemu)\*" resources/qemu -Recurse -Force
 			- name: Build portable Windows app
 				run: npm run desktop:build:windows
 			- name: Upload Windows executable to release

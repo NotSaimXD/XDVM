@@ -9,12 +9,14 @@ Version `3.1.0` adds the Windows portable desktop build pipeline. The GitHub rel
 ### What changed
 
 - Windows packaging is pinned to an x64 portable target.
+- Windows releases include a guided NSIS installer with desktop and Start Menu shortcuts, an uninstall entry, and a selectable installation directory.
 - Release artifacts use names such as `XDVM-3.1.0-win-x64.exe`.
 - GitHub Actions builds the Windows executable and attaches it to the matching release tag.
 
 ### Added
 
 - A dedicated `desktop:build:windows` command.
+- A professional `XDVM Setup 3.1.0.exe` installer alongside the portable executable.
 - Automated Windows release workflow for the portable `.exe`.
 - Optional bundled QEMU support through `resources/qemu/qemu-system-x86_64.exe`.
 

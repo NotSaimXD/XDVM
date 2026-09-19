@@ -11,7 +11,7 @@
 		"build": "vite build",
 		"desktop:dev": "npm run build && electron electron/main.cjs",
 		"desktop:build": "npm run build && electron-builder --win portable",
-		"desktop:build:windows": "npm run build && electron-builder --win portable --x64",
+		"desktop:build:windows": "npm run build && electron-builder --win nsis portable --x64",
 		"desktop:build:linux": "npm run build && electron-builder --linux AppImage"
 	},
 	"devDependencies": {
@@ -46,7 +46,17 @@
 		"files": ["build/**/*", "electron/**/*", "package.json"],
 		"extraResources": [{ "from": "resources/qemu", "to": "qemu" }],
 		"artifactName": "XDVM-${version}-${os}-${arch}.${ext}",
-		"win": { "target": [{ "target": "portable", "arch": ["x64"] }] },
+		"win": { "target": [{ "target": "nsis", "arch": ["x64"] }, { "target": "portable", "arch": ["x64"] }] },
+		"nsis": {
+			"oneClick": false,
+			"perMachine": true,
+			"allowToChangeInstallationDirectory": true,
+			"createDesktopShortcut": "always",
+			"createStartMenuShortcut": true,
+			"shortcutName": "XDVM",
+			"uninstallDisplayName": "XDVM 3.1",
+			"deleteAppDataOnUninstall": false
+		},
 		"linux": { "target": "AppImage", "category": "Utility" }
 	}
 }
