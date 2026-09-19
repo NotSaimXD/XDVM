@@ -30,6 +30,8 @@
 	let nativeHost = null;
 	let nativeMode = false;
 	let nativeProfile = 'balanced';
+	let nativeMemory = 4096;
+	let nativeCores = 4;
 	let nativeImage = null;
 	let nativeStatus = '';
 	let nativeError = '';
@@ -56,6 +58,10 @@
 		if (window.xdvmNative) {
 			nativeHost = await window.xdvmNative.getHost();
 			nativeProfile = nativeHost.cores >= 8 && nativeHost.totalMemory >= 16384 ? 'workstation' : nativeHost.cores >= 4 && nativeHost.totalMemory >= 8192 ? 'balanced' : 'quiet';
+			const savedHardware = JSON.parse(localStorage.getItem('xdvm-hardware') || '{}');
+			nativeProfile = savedHardware.profile || nativeProfile;
+			nativeMemory = savedHardware.memory || nativeHost.profiles[nativeProfile]?.memory || 4096;
+			nativeCores = savedHardware.cores || nativeHost.profiles[nativeProfile]?.cores || 4;
 			hostCores = `${nativeHost.cores} logical cores`;
 		}
 		if (navigator.storage?.estimate) {
@@ -75,6 +81,16 @@
 		themeMode = mode;
 		localStorage.setItem('xdvm-theme', mode);
 		applyTheme();
+	}
+
+	function selectNativeProfile(event) {
+		nativeProfile = event.currentTarget.value;
+		const profile = nativeHost.profiles[nativeProfile];
+		if (nativeProfile !== 'custom' && profile) {
+			nativeMemory = profile.memory;
+			nativeCores = profile.cores;
+		}
+		localStorage.setItem('xdvm-hardware', JSON.stringify({ profile: nativeProfile, memory: nativeMemory, cores: nativeCores }));
 	}
 
 	function formatRecordingTime(seconds) {
@@ -178,8 +194,9 @@
 				return;
 			}
 			try {
-				const result = await window.xdvmNative.launch({ imagePath: nativeImage.path, imageType: nativeImage.imageType, profileName: nativeProfile });
-				nativeStatus = `${result.profile} profile started with ${result.accelerator}.`;
+				localStorage.setItem('xdvm-hardware', JSON.stringify({ profile: nativeProfile, memory: nativeMemory, cores: nativeCores }));
+				const result = await window.xdvmNative.launch({ imagePath: nativeImage.path, imageType: nativeImage.imageType, imageFormat: nativeImage.imageFormat, profileName: nativeProfile, memory: nativeMemory, cores: nativeCores });
+				nativeStatus = `${result.profile} profile started with ${result.memory} MB and ${result.cores} vCPU using ${result.accelerator}.`;
 				nativeVm = result;
 				nativeError = '';
 			} catch (error) {
@@ -272,12 +289,16 @@
 						<p class="runtime-note">{nativeHost.qemuPath ? `QEMU ready: ${nativeHost.qemuPath}` : 'QEMU is not installed or bundled on this device.'}</p>
 						{#if nativeMode}
 							<label class="profile-select">Device profile
-								<select bind:value={nativeProfile}>
+								<select value={nativeProfile} on:change={selectNativeProfile}>
 									{#each Object.entries(nativeHost.profiles) as [id, profile]}
 										<option value={id}>{profile.label} · {profile.memory} MB / {profile.cores} cores</option>
 									{/each}
 								</select>
 							</label>
+							<div class="hardware-grid">
+								<label>Memory (MB)<input type="number" min="512" step="512" bind:value={nativeMemory} /></label>
+								<label>vCPU cores<input type="number" min="1" max={nativeHost.cores} bind:value={nativeCores} /></label>
+							</div>
 							<p class="runtime-note">{nativeProfile === 'android' ? 'Runs Android x86 or x86_64 images without Android Studio. Virtio GPU, tablet input, and low-power sleep settings are enabled for integrated graphics.' : nativeHost.kvm ? 'KVM acceleration is available on this host.' : 'KVM is unavailable; QEMU will use multi-threaded TCG.'}</p>
 							<button class="image-picker" on:click={chooseNativeImage}>{nativeImage?.name || (nativeProfile === 'android' ? 'Choose Android ISO, IMG, QCOW2, VMDK, or VDI' : 'Choose ISO or disk image')}</button>
 							{#if nativeStatus}<p class="native-status">{nativeStatus}</p>{/if}
@@ -357,6 +378,9 @@
 	.runtime-switch button:disabled { color: #adb6b0; cursor: not-allowed; }
 	.profile-select { display: grid; gap: 6px; margin-top: 12px; color: #6c756e; font-size: 11px; }
 	.profile-select select { width: 100%; padding: 9px 10px; border: 1px solid #d8e0db; border-radius: 7px; background: #fff; color: #26332d; font: inherit; font-size: 11px; }
+	.hardware-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+	.hardware-grid label { display: grid; gap: 5px; color: #6c756e; font-size: 10px; }
+	.hardware-grid input { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #d8e0db; border-radius: 7px; background: #fff; color: #26332d; font: inherit; font-size: 11px; }
 	.runtime-note, .native-status, .native-error { margin: 10px 0 0; font-size: 11px; line-height: 1.45; }
 	.runtime-note { color: #6c756e; }
 	.native-status { color: #347b68; }
@@ -372,6 +396,7 @@
 	.launcher.theme-dark .runtime-control { border-top-color: #304239; }
 	.launcher.theme-dark .runtime-switch, .launcher.theme-dark .theme-switch { border-color: #30463b; background: #15201b; }
 	.launcher.theme-dark .profile-select select { border-color: #3b5548; background: #15201b; color: #edf4ef; }
+	.launcher.theme-dark .hardware-grid input { border-color: #3b5548; background: #15201b; color: #edf4ef; }
 	.launcher.theme-dark .image-picker { border-color: #527b67; background: #15201b; color: #9ed0b4; }
 	.launcher.theme-dark .recorder-note, .launcher.theme-dark .audio-toggle, .launcher.theme-dark .runtime-note { color: #a7b5ac; }
 	.launcher.theme-dark .record-toggle { border-color: #3b5548; background: #1b2621; color: #b5dec4; }

@@ -12,6 +12,7 @@ Version `4.0.0` adds persistent appearance modes and keeps the professional Wind
 - Theme preference persistence across sessions using local storage.
 - Automatic response to the operating system's dark-mode preference when System mode is selected.
 - Windows NSIS installer with desktop and Start Menu shortcuts, an uninstall entry, and selectable installation directory.
+- Custom native VM hardware controls for RAM and vCPU cores, with saved settings and host-capacity limits.
 
 ### Changed
 

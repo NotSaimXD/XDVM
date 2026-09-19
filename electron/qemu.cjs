@@ -8,7 +8,8 @@ const DEVICE_PROFILES = {
 	quiet: { label: 'Quiet', memory: 2048, cores: 2 },
 	balanced: { label: 'Balanced', memory: 4096, cores: 4 },
 	workstation: { label: 'Workstation', memory: 8192, cores: 6 },
-	android: { label: 'Android Fast', memory: 4096, cores: 4, android: true, graphics: 'virtio-gpu' }
+	android: { label: 'Android Fast', memory: 4096, cores: 4, android: true, graphics: 'virtio-gpu' },
+	custom: { label: 'Custom', memory: 4096, cores: 4 }
 };
 
 function getDeviceProfile(name, host) {
@@ -65,13 +66,17 @@ function getDiskFormat(imagePath) {
 	return 'raw';
 }
 
-function buildQemuArgs({ imagePath, imageType, imageFormat, profileName, host }) {
+function buildQemuArgs({ imagePath, imageType, imageFormat, profileName, memory, cores, host }) {
 	const profile = getDeviceProfile(profileName, host);
+	const requestedMemory = Number(memory) || profile.memory;
+	const requestedCores = Number(cores) || profile.cores;
+	const guestMemory = Math.max(512, Math.min(Math.floor(host.totalMemory * 0.8), requestedMemory));
+	const guestCores = Math.max(1, Math.min(host.cores, Math.floor(requestedCores)));
 	const args = [
 		'-name', 'XDVM',
 		'-machine', 'q35',
-		'-m', String(profile.memory),
-		'-smp', String(Math.min(profile.cores, host.cores)),
+		'-m', String(guestMemory),
+		'-smp', String(guestCores),
 		'-nic', 'user,model=virtio',
 		'-device', profile.android ? 'virtio-gpu-pci' : 'virtio-vga',
 		'-display', 'default'
@@ -91,10 +96,10 @@ function buildQemuArgs({ imagePath, imageType, imageFormat, profileName, host })
 	} else {
 		args.push('-drive', `file=${imagePath},format=${imageFormat || getDiskFormat(imagePath)},if=virtio`);
 	}
-	return { args, profile };
+	return { args, profile, memory: guestMemory, cores: guestCores };
 }
 
-function startVm({ imagePath, imageType, profileName, resourcesPath }) {
+function startVm({ imagePath, imageType, imageFormat, profileName, memory, cores, resourcesPath }) {
 	if (!path.isAbsolute(imagePath) || !fs.existsSync(imagePath)) {
 		throw new Error('The selected VM image is not available on this device.');
 	}
@@ -102,12 +107,12 @@ function startVm({ imagePath, imageType, profileName, resourcesPath }) {
 	if (!host.qemuPath) {
 		throw new Error('QEMU was not found. Add qemu-system-x86_64 to the bundled qemu folder or install it on the host.');
 	}
-	const { args, profile } = buildQemuArgs({ imagePath, imageType, profileName, host });
+	const { args, profile, memory: guestMemory, cores: guestCores } = buildQemuArgs({ imagePath, imageType, imageFormat, profileName, memory, cores, host });
 	const child = spawn(host.qemuPath, args, { detached: false, stdio: 'ignore', windowsHide: true });
 	runningVms.set(child.pid, child);
 	child.once('exit', () => runningVms.delete(child.pid));
 	child.unref();
-	return { pid: child.pid, accelerator: host.kvm ? 'KVM' : 'TCG', graphics: profile.graphics || 'virtio-vga', profile: profile.label };
+	return { pid: child.pid, accelerator: host.kvm ? 'KVM' : 'TCG', graphics: profile.graphics || 'virtio-vga', profile: profile.label, memory: guestMemory, cores: guestCores };
 }
 
 function getVmStatus(pid) {
