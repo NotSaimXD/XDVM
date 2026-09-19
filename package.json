@@ -1,6 +1,6 @@
 {
 	"name": "xdvm",
-	"version": "3.0.0",
+	"version": "3.1.0",
 	"productName": "XDVM",
 	"description": "A hybrid virtual machine workspace powered by browser virtualization and native QEMU/KVM.",
 	"author": "NotSaimXD",
@@ -11,6 +11,7 @@
 		"build": "vite build",
 		"desktop:dev": "npm run build && electron electron/main.cjs",
 		"desktop:build": "npm run build && electron-builder --win portable",
+		"desktop:build:windows": "npm run build && electron-builder --win portable --x64",
 		"desktop:build:linux": "npm run build && electron-builder --linux AppImage"
 	},
 	"devDependencies": {
@@ -44,7 +45,8 @@
 		"productName": "XDVM",
 		"files": ["build/**/*", "electron/**/*", "package.json"],
 		"extraResources": [{ "from": "resources/qemu", "to": "qemu" }],
-		"win": { "target": "portable" },
+		"artifactName": "XDVM-${version}-${os}-${arch}.${ext}",
+		"win": { "target": [{ "target": "portable", "arch": ["x64"] }] },
 		"linux": { "target": "AppImage", "category": "Utility" }
 	}
 }

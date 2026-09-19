@@ -1,6 +1,27 @@
-# XDVM 3
+# XDVM 3.1
 
-XDVM is a hybrid Linux workspace: launch lightweight environments in the browser with CheerpX, or use native QEMU with KVM acceleration from the desktop app. XDVM is a fork of WebVM by NotSaimXD and keeps the original WebVM attribution and licensing terms.
+XDVM is a hybrid Linux workspace made by NotSaimXD heres it launches lightweight environments in the browser with CheerpX, or use native QEMU with KVM acceleration from the desktop app. XDVM is a fork of WebVM by NotSaimXD and keeps the original WebVM attribution and licensing terms.
+
+## XDVM 3.1 release
+
+Version `3.1.0` adds the Windows portable desktop build pipeline. The GitHub release is built on Windows so the portable `.exe` is a real runnable application rather than a placeholder generated on Linux.
+
+### What changed
+
+- Windows packaging is pinned to an x64 portable target.
+- Release artifacts use names such as `XDVM-3.1.0-win-x64.exe`.
+- GitHub Actions builds the Windows executable and attaches it to the matching release tag.
+
+### Added
+
+- A dedicated `desktop:build:windows` command.
+- Automated Windows release workflow for the portable `.exe`.
+- Optional bundled QEMU support through `resources/qemu/qemu-system-x86_64.exe`.
+
+### Removed
+
+- No browser features were removed.
+- The release process no longer treats a Linux-side cross-build as a Windows executable; Windows packaging runs on a Windows builder.
 
 ## What changed
 
